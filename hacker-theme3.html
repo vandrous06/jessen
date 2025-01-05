@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Stream</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .close-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: 2px solid rgba(0, 255, 0, 0.7);
+            color: #0f0;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .close-btn:hover {
+            background: rgba(0, 255, 0, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <button class="close-btn" id="closeBtn" title="Close">&times;</button>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Create number streams
+        class Stream {
+            constructor(x, fontSize) {
+                this.x = x;
+                this.y = -fontSize;
+                this.fontSize = fontSize;
+                this.speed = Math.random() * 2 + 1;
+                this.characters = [];
+                this.length = Math.floor(Math.random() * 20 + 5);
+                this.maxY = canvas.height;
+            }
+
+            draw() {
+                // Update position
+                this.y += this.speed;
+
+                // Generate new numbers
+                if (Math.random() > 0.9) {
+                    this.characters.unshift(Math.floor(Math.random() * 10));
+                    if (this.characters.length > this.length) {
+                        this.characters.pop();
+                    }
+                }
+
+                // Draw characters with fade effect
+                ctx.font = `${this.fontSize}px monospace`;
+                this.characters.forEach((char, index) => {
+                    const alpha = 1 - (index / this.length);
+                    ctx.fillStyle = `rgba(0, 255, 0, ${alpha})`;
+                    ctx.fillText(char, this.x, this.y - (index * this.fontSize));
+                });
+
+                // Reset if stream goes off screen
+                if (this.y - (this.length * this.fontSize) > this.maxY) {
+                    this.y = -this.fontSize;
+                    this.characters = [];
+                }
+            }
+        }
+
+        // Create streams
+        let streams = [];
+        function initStreams() {
+            streams = [];
+            const fontSize = Math.max(14, Math.floor(window.innerWidth / 50));
+            const columns = Math.floor(canvas.width / fontSize);
+            
+            for (let i = 0; i < columns; i++) {
+                streams.push(new Stream(i * fontSize, fontSize));
+            }
+        }
+        initStreams();
+
+        // Animation loop
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            streams.forEach(stream => stream.draw());
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // Close button functionality
+        document.getElementById('closeBtn').addEventListener('click', function() {
+            if (window.parent !== window) {
+                window.parent.postMessage('closeMatrixStream', '*');
+            } else {
+                window.close();
+                document.body.style.display = 'none';
+            }
+        });
+
+        // Handle window resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                resizeCanvas();
+                initStreams();
+            }, 250);
+        });
+    </script>
+</body>
+</html>
